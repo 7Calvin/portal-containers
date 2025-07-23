@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portal-web
+  template:
+    metadata:
+      labels:
+        app: portal-web
+    spec:
+      containers:
+      - name: portal
+        image: calvinlogins/portal-image:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DB_HOST
+          value: "postgres.default.svc.cluster.local"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-service
+spec:
+  selector:
+    app: portal-web
+  ports:
+  - port: 80
+    targetPort: 5000

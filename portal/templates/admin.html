@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        form {
+            margin-top: 20px;
+        }
+        input[type="text"], input[type="password"] {
+            padding: 5px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        input[type="checkbox"] {
+            margin-left: 10px;
+        }
+        .button {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #007BFF;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Painel Administrativo</h2>
+
+    <h3>Pods Ativos</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Nome do Pod</th>
+                <th>Status</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pod in pods %}
+            <tr>
+                <td>{{ pod.metadata.name }}</td>
+                <td>{{ pod.status.phase }}</td>
+                <td>{{ pod.status.pod_ip }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/start_browser" class="button">Iniciar meu navegador</a>
+
+    <h3>Adicionar Novo Usuário</h3>
+    <form action="/create_user" method="post">
+        <input type="text" name="username" placeholder="Nome do usuário" required>
+        <input type="password" name="password" placeholder="Senha" required>
+        Admin? <input type="checkbox" name="is_admin">
+        <button type="submit">Adicionar Usuário</button>
+    </form>
+</body>
+</html>

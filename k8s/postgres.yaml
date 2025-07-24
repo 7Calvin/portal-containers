@@ -1,45 +1,10 @@
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: postgres
-spec:
-  serviceName: postgres
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:14
-        envFrom:
-        - secretRef:
-            name: postgres-secret
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/postgresql/data
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 1Gi
----
 apiVersion: v1
-kind: Service
+kind: Secret
 metadata:
-  name: postgres
-spec:
-  selector:
-    app: postgres
-  ports:
-    - port: 5432
-      targetPort: 5432
+  name: postgres-secret
+  namespace: portal
+type: Opaque
+stringData:
+  POSTGRES_DB: portal_db
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: admin123

@@ -1,5 +1,84 @@
-<html><body>
-<h2>Bem-vindo, {{ username }}</h2>
-<p>Login realizado com sucesso.</p>
-<a href="/start_browser"><button>Iniciar Navegador</button></a>
-</body></html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="container" data-user="{{ session['username'] }}">
+  <div class="header">
+    <h2>Bem-vindo, {{ session['username'] }}</h2>
+    <a href="/logout" class="button danger">Logout</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+      {% for category, msg in messages %}
+        <div class="alert alert-{{ category }}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <section>
+    {% set pod_name = 'browser-' + session['username'] %}
+    {% if pod_exists %}
+      <p>Seu navegador está ativo no pod <strong>{{ pod_name }}</strong> (IP: {{ pod_ip }}).</p>
+      <button class="button danger" onclick="stopBrowser()">Encerrar Navegador</button>
+    {% else %}
+      <button class="button" onclick="startBrowser()">Iniciar Navegador</button>
+    {% endif %}
+  </section>
+
+  <!-- Reuse waitModal from admin.html -->
+  <div id="waitModal" style="display:none;">
+    <div class="modal-content">
+      <p>Preparando seu navegador...</p>
+      <p id="countdown">20</p>
+    </div>
+  </div>
+
+  <script>
+    const REDIRECT_DELAY = 20;
+    const user = document.body.dataset.user;
+
+    function startBrowser() {
+      fetch('/check_browser')
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            window.location.href = `http://${user}.portal.local`;
+          } else {
+            const modal = document.getElementById('waitModal');
+            modal.style.display = 'block';
+            let seconds = REDIRECT_DELAY;
+            document.getElementById('countdown').textContent = seconds;
+            const interval = setInterval(() => {
+              seconds--;
+              document.getElementById('countdown').textContent = seconds;
+              if (seconds <= 0) {
+                clearInterval(interval);
+                window.location.href = '/start_browser';
+              }
+            }, 1000);
+          }
+        });
+    }
+
+    function stopBrowser() {
+      fetch('/stop_browser')
+        .then(res => res.json())
+        .then(data => {
+          if (data.stopped) {
+            location.reload();
+          } else {
+            alert('Falha ao encerrar o navegador');
+          }
+        });
+    }
+  </script>
+</body>
+</html>

@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: init-db
+  namespace: portal
 spec:
   template:
     spec:
@@ -9,6 +10,7 @@ spec:
       containers:
       - name: init-db
         image: calvinlogins/portal-image:latest
+        imagePullPolicy: Always
         command: ["python", "db_init.py"]
         env:
         - name: DB_HOST

@@ -1,78 +1,233 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        form {
-            margin-top: 20px;
-        }
-        input[type="text"], input[type="password"] {
-            padding: 5px;
-            width: 200px;
-            margin-right: 10px;
-        }
-        input[type="checkbox"] {
-            margin-left: 10px;
-        }
-        .button {
-            display: inline-block;
-            padding: 8px 15px;
-            background-color: #007BFF;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* Modal overlay */
+    #waitModal, #deleteModal, #editModal, #deleteUserModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .modal-content {
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      border-radius: 6px;
+      text-align: center;
+      max-width: 90%;
+    }
+    .actions button, .actions a {
+      margin-right: 10px;
+    }
+    /* disabled button look */
+    .button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
-<body>
+<body class="container" data-user="{{ session['username'] }}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+      {% for category, msg in messages %}
+        <div class="alert alert-{{ category }}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="header">
     <h2>Painel Administrativo</h2>
+    <a href="/logout" class="button danger">Logout</a>
+  </div>
 
-    <h3>Pods Ativos</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Nome do Pod</th>
-                <th>Status</th>
-                <th>IP</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pod in pods %}
-            <tr>
-                <td>{{ pod.metadata.name }}</td>
-                <td>{{ pod.status.phase }}</td>
-                <td>{{ pod.status.pod_ip }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <h3>Pods Ativos</h3>
+  <table>
+    <thead><tr><th>Nome do Pod</th><th>Status</th><th>IP</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for pod in pods %}
+      <tr>
+        <td>{{ pod.metadata.name }}</td>
+        <td>{{ pod.status.phase }}</td>
+        <td>{{ pod.status.pod_ip or '-' }}</td>
+        <td>
+          <button class="button danger" onclick="showDeleteModal('{{ pod.metadata.name }}')">Excluir</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-    <a href="/start_browser" class="button">Iniciar meu navegador</a>
+  <div class="actions">
+    <button id="startBtn" class="button" onclick="startBrowser()">Iniciar meu navegador</button>
+  </div>
 
-    <h3>Adicionar Novo Usuário</h3>
-    <form action="/create_user" method="post">
-        <input type="text" name="username" placeholder="Nome do usuário" required>
-        <input type="password" name="password" placeholder="Senha" required>
-        Admin? <input type="checkbox" name="is_admin">
-        <button type="submit">Adicionar Usuário</button>
-    </form>
+  <h3>Adicionar Novo Usuário</h3>
+  <form action="/create_user" method="post">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <input type="text" name="username" placeholder="Nome do usuário" required>
+      <input type="password" name="password" placeholder="Senha" required>
+      <label style="display: flex; align-items: center;"><input type="checkbox" name="is_admin"> Admin?</label>
+      <button type="submit" class="button">Adicionar Usuário</button>
+    </div>
+  </form>
+
+  <h3>Usuários Cadastrados</h3>
+  <table>
+    <thead><tr><th>Username</th><th>Admin</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.username }}</td>
+        <td>{{ '✔️' if user.is_admin else '' }}</td>
+        <td>
+          <button class="button" onclick="showEditModal('{{ user.username }}')">Alterar Senha</button>
+          <button class="button danger" onclick="confirmDeleteUser('{{ user.username }}')">Excluir</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">Nenhum usuário cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Modal de espera para iniciar navegador -->
+  <div id="waitModal">
+    <div class="modal-content">
+      <p>Preparando seu navegador...</p>
+      <p id="countdown">20</p>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação de exclusão de pod -->
+  <div id="deleteModal">
+    <div class="modal-content">
+      <p id="deleteText"></p>
+      <button id="confirmDeletePod" class="button danger">Confirmar</button>
+      <button onclick="closeDeleteModal()" class="button">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal de edição de usuário -->
+  <div id="editModal">
+    <div class="modal-content">
+      <h3>Alterar senha de <span id="editUser"></span></h3>
+      <input type="password" id="newPassword" placeholder="Nova senha" required>
+      <div style="margin-top:10px;">
+        <button id="confirmEdit" class="button">Salvar</button>
+        <button onclick="closeEditModal()" class="button danger">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação de exclusão de usuário -->
+  <div id="deleteUserModal">
+    <div class="modal-content">
+      <p id="deleteUserText"></p>
+      <p>Digite o nome do usuário para confirmar:</p>
+      <input type="text" id="deleteUserInput" placeholder="Digite o username">
+      <div style="margin-top:10px;">
+        <button id="confirmDeleteUserBtn" class="button danger" disabled>Confirmar</button>
+        <button onclick="closeDeleteUserModal()" class="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const REDIRECT_DELAY = 20;
+    const user = document.body.dataset.user;
+    let podToDelete = null;
+    let userToEdit = null;
+    let userToDelete = null;
+
+    function startBrowser() {
+      fetch('/check_browser')
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            window.location.href = `http://${user}.portal.local`;
+          } else {
+            const modal = document.getElementById('waitModal');
+            modal.style.display = 'block';
+            let seconds = REDIRECT_DELAY;
+            document.getElementById('countdown').textContent = seconds;
+            const interval = setInterval(() => {
+              seconds--;
+              document.getElementById('countdown').textContent = seconds;
+              if (seconds <= 0) {
+                clearInterval(interval);
+                window.location.href = '/start_browser';
+              }
+            }, 1000);
+          }
+        });
+    }
+
+    // Pod delete
+    function showDeleteModal(podName) {
+      podToDelete = podName;
+      document.getElementById('deleteText').textContent = `Excluir pod "${podName}"?`;
+      document.getElementById('deleteModal').style.display = 'block';
+    }
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').style.display = 'none';
+      podToDelete = null;
+    }
+    document.getElementById('confirmDeletePod').addEventListener('click', () => {
+      fetch(`/delete_pod/${podToDelete}`)
+        .then(r => r.ok ? location.reload() : alert('Falha ao excluir pod'));
+    });
+
+    // Edit user
+    function showEditModal(username) {
+      userToEdit = username;
+      document.getElementById('editUser').textContent = username;
+      document.getElementById('editModal').style.display = 'block';
+    }
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+      userToEdit = null;
+    }
+    document.getElementById('confirmEdit').addEventListener('click', () => {
+      const pw = document.getElementById('newPassword').value;
+      if (!pw) return alert('Digite uma senha.');
+      fetch(`/edit_user/${userToEdit}`, {
+        method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: `new_password=${encodeURIComponent(pw)}`
+      }).then(r => r.ok ? location.reload() : alert('Falha ao alterar senha'));
+    });
+
+    // Delete user
+    function confirmDeleteUser(username) {
+      userToDelete = username;
+      document.getElementById('deleteUserText').textContent = `Excluir usuário "${username}"?`;
+      document.getElementById('deleteUserInput').value = '';
+      document.getElementById('confirmDeleteUserBtn').disabled = true;
+      document.getElementById('deleteUserModal').style.display = 'block';
+    }
+    function closeDeleteUserModal() {
+      document.getElementById('deleteUserModal').style.display = 'none';
+      userToDelete = null;
+    }
+
+    document.getElementById('deleteUserInput').addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      document.getElementById('confirmDeleteUserBtn').disabled = (val !== userToDelete);
+    });
+
+    document.getElementById('confirmDeleteUserBtn').addEventListener('click', () => {
+      fetch(`/delete_user/${userToDelete}`)
+        .then(r => r.ok ? location.reload() : alert('Falha ao excluir usuário'));
+    });
+  </script>
 </body>
 </html>

@@ -8,7 +8,7 @@
 /* Fonte geral */
 body {
   font-family: 'Segoe UI', Tahoma, sans-serif;
-  background-color: #f5f7fa;
+  background-color: #000000;
   color: #333;
   line-height: 1.6;
   padding: 20px;
@@ -51,7 +51,7 @@ tr:nth-child(even) {
 
 /* Formulários */
 form {
-  background: #fff;
+  background: #3498db;
   padding: 20px;
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -72,7 +72,7 @@ input[type="checkbox"] {
 button, .button {
   display: inline-block;
   padding: 10px 20px;
-  background-color: #3498db;
+  background-color: #464646;
   color: #fff;
   text-decoration: none;
   border: none;
@@ -106,4 +106,20 @@ button:hover,
 }
 .header a:hover {
   text-decoration: underline;
+}
+
+.flash-container {
+  margin: 15px 0;
+}
+.alert {
+  padding: 10px;
+  border-radius: 4px;
+}
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
 }

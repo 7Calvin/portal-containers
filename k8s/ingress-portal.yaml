@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: portal-ingress
-  namespace: default
+  namespace: portal
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
